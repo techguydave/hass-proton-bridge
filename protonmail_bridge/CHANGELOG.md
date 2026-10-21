@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.27.1-4.8
+- Apply IMAP security correctly: read the IMAP block's Security line from `info`, run `change imap-security` when it differs, and log the result.
+- Never send Bridge's `clear` command (it is a group of destructive commands); use Ctrl-L.
+- Credentials button shows only the latest `info` block.
+- Answer "no" to the CLI's "use a security key?" question so TOTP login proceeds.
+
+## 3.27.1-4.7
+- "Show Bridge credentials" shows just the IMAP address, port, username, password and security (falls back to the full `info` output if the format is not recognised).
+
 ## 3.27.1-4.6
 - Console is embedded in the status page and Proton verification links refresh automatically beneath it, so you never leave the page (leaving closed the console connection).
 

@@ -25,12 +25,20 @@ creds() {
     flock -w 10 9 || { echo "Another request is running; try again."; return; }
     tmux has-session -t bridge 2>/dev/null || { echo "Bridge CLI is not running."; return; }
     tmux clear-history -t bridge
-    tmux send-keys -t bridge 'clear' Enter
+    tmux send-keys -t bridge C-l
     sleep 1
     tmux send-keys -t bridge 'info' Enter
     sleep 3
-    tmux capture-pane -p -J -t bridge -S -100 | sed -e 's/\x1b\[[0-9;]*[A-Za-z]//g' | grep -v '^[[:space:]]*$' | tail -n 40
-    tmux send-keys -t bridge 'clear' Enter
+    local out
+    out=$(tmux capture-pane -p -J -t bridge -S -100 | sed -e 's/\x1b\[[0-9;?]*[A-Za-z]//g' | grep -v '^[[:space:]]*$' | awk '/Configuration for/{buf=""} {buf=buf $0 "\n"} END{printf "%s", buf}')
+    # Keep only the IMAP block's address/port/username/password/security; fall back to everything.
+    local trimmed
+    trimmed=$(printf '%s\n' "$out" | awk '
+        tolower($0) ~ /imap/ && tolower($0) !~ /(username|password|port|address|security)[[:space:]]*:/ {f=1; next}
+        tolower($0) ~ /smtp/ && tolower($0) !~ /(username|password|port|address|security)[[:space:]]*:/ {f=0; next}
+        f && tolower($0) ~ /(address|port|username|password|security)[[:space:]]*:/ {sub(/^[[:space:]]+/, ""); print}')
+    if [ -n "$trimmed" ]; then printf '%s\n' "$trimmed"; else printf '%s\n' "$out"; fi
+    tmux send-keys -t bridge C-l
     sleep 1
     tmux clear-history -t bridge
 }
@@ -63,7 +71,7 @@ pre{white-space:pre-wrap;word-break:break-all;margin:8px 0 0}.mut{color:var(--mu
 <h1>Proton Mail Bridge</h1>
 <div class="card"><strong>Status</strong><div id="status" class="mut">Checking…</div></div>
 <div class="card"><strong>Bridge credentials</strong>
-<p class="mut">These are the IMAP username and password Bridge generated; they are not your Proton password. They are fetched from the running Bridge only when you click and are never written to the log.</p>
+<p class="mut">The IMAP login Bridge generated (not your Proton password), fetched only when you click.</p>
 <button id="show">Show Bridge credentials</button>
 <pre id="out"></pre></div>
 <div class="card"><strong>Console</strong>
