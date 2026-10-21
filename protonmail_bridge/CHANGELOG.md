@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.27.1-4.14
+- Result lines (LOGIN_OK, LOGIN_FAIL, IMAP_SECURITY…) start on their own line, so the log filter no longer reports "no result" falsely.
+
 ## 3.27.1-4.13
 - Fix the IMAP-security change: wait for the CLI's yes/no question before answering (a leftover prompt made the script answer it with the next command, i.e. "no").
 - When changing IMAP security does not take effect, log the CLI output.

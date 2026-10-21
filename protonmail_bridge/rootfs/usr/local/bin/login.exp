@@ -27,7 +27,7 @@ proc report {} {
     puts "--- Bridge CLI output (secrets redacted) ---\n[string trim $s]\n---"
     file delete -force $tlog
 }
-proc fail {msg} { report; puts "LOGIN_FAIL: $msg"; catch {send "exit\r"}; exit 1 }
+proc fail {msg} { report; puts "\nLOGIN_FAIL: $msg"; catch {send "exit\r"}; exit 1 }
 
 # Startup output (GPG key generation, banner) holds no secrets, so show it for diagnosis.
 log_user 1
@@ -67,7 +67,7 @@ if {$mode eq "login"} {
         timeout { fail "timed out during login" }
         eof     { fail "CLI exited during login" }
     }
-    puts "LOGIN_OK"
+    puts "\nLOGIN_OK"
     expect -timeout 10 -re {>>>} {}
 }
 
@@ -110,14 +110,14 @@ if {$want ne ""} {
         set now [imap_security]
         if {$now ne $want} {
             report
-            puts "IMAP_SECURITY_FAIL $cur -> $now (wanted $want)"
+            puts "\nIMAP_SECURITY_FAIL $cur -> $now (wanted $want)"
         } else {
-            puts "IMAP_SECURITY $cur -> $now (wanted $want)"
+            puts "\nIMAP_SECURITY $cur -> $now (wanted $want)"
         }
     } elseif {$cur eq ""} {
-        puts "IMAP_SECURITY unknown (could not read it from info)"
+        puts "\nIMAP_SECURITY unknown (could not read it from info)"
     } else {
-        puts "IMAP_SECURITY already $cur"
+        puts "\nIMAP_SECURITY already $cur"
     }
 }
 send "exit\r"
