@@ -1,5 +1,5 @@
 name: Proton Mail Bridge
-version: "3.27.1-4.12"
+version: "3.27.1-4.13"
 slug: protonmail_bridge
 description: Proton Mail Bridge exposing your mailbox as IMAP/SMTP inside the Home Assistant network only
 url: https://github.com/techguydave/hass-proton-bridge

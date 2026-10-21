@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.27.1-4.13
+- Fix the IMAP-security change: wait for the CLI's yes/no question before answering (a leftover prompt made the script answer it with the next command, i.e. "no").
+- When changing IMAP security does not take effect, log the CLI output.
+
 ## 3.27.1-4.12
 - The server name is read from the Supervisor at runtime (stable hostname, never an IP); docs no longer hard-code one.
 - "Show Bridge credentials" shows the real server and port (not Bridge's internal 127.0.0.1:1143).

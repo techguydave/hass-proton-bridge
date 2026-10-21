@@ -99,13 +99,21 @@ if {$want ne ""} {
     set cur [imap_security]
     if {$cur ne "" && $cur ne $want} {
         send "change imap-security\r"
+        # Wait for the question first: a leftover prompt may already be in the buffer, and treating
+        # it as the end of the command would answer the question with the next command.
         expect {
-            -nocase -re {yes/no[^\n]*:|\(y/n\)|\[y/n\]} { send "yes\r"; exp_continue }
-            -re {>>>} {}
-            timeout { fail "timed out changing IMAP security" }
+            -nocase -re {yes/no[^\n]*:|\(y/n\)|\[y/n\]} { send "yes\r" }
+            timeout { fail "IMAP security question did not appear" }
         }
+        expect -timeout 15 -re {>>>} {}
+        after 3000
         set now [imap_security]
-        puts "IMAP_SECURITY $cur -> $now (wanted $want)"
+        if {$now ne $want} {
+            report
+            puts "IMAP_SECURITY_FAIL $cur -> $now (wanted $want)"
+        } else {
+            puts "IMAP_SECURITY $cur -> $now (wanted $want)"
+        }
     } elseif {$cur eq ""} {
         puts "IMAP_SECURITY unknown (could not read it from info)"
     } else {
