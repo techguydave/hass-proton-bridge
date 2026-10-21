@@ -21,7 +21,11 @@ if [ -n "$PB_USERNAME" ] && [ -n "$PB_PASSWORD" ]; then
     /usr/local/bin/clear-secrets.sh
 elif [ -d /root/.password-store ] && [ -n "$PB_IMAP_SECURITY" ]; then
     result=$(/usr/local/bin/login.exp settings 2>&1 | tr -d '\000')
-    echo "$result" | grep -E '^(LOGIN_FAIL|IMAP_SECURITY_SET)' || true
+    if echo "$result" | grep -q '^LOGIN_FAIL'; then
+        echo "$result" | tail -n 40
+    else
+        echo "$result" | grep -E '^IMAP_SECURITY' || echo "IMAP_SECURITY: no result from settings run"
+    fi
 fi
 unset PB_PASSWORD PB_MAILBOX_PASSWORD PB_2FA
 

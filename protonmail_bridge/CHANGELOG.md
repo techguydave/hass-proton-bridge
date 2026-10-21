@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.27.1-4.9
+- Log the result of the IMAP-security settings run (the filter was dropping it) and show the CLI output if it fails.
+
 ## 3.27.1-4.8
 - Apply IMAP security correctly: read the IMAP block's Security line from `info`, run `change imap-security` when it differs, and log the result.
 - Never send Bridge's `clear` command (it is a group of destructive commands); use Ctrl-L.
