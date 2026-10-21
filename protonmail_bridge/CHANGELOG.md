@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.27.1-4.5
+- Status page lists Proton links (e.g. CAPTCHA/human-verification) found in the Bridge CLI output as clickable links.
+- Console text can be selected normally (tmux mouse mode off).
+- Drop stray null bytes from login output.
+
 ## 3.27.1-4.4
 - Fix login timeout: prompt patterns no longer require the prompt at end of line (the CLI redraws it with escape codes).
 - On failure, print the CLI output with escape codes stripped and secrets redacted.

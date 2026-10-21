@@ -16,11 +16,11 @@ export PB_IMAP_SECURITY="$(opt imap_security)"
 # --- one-time login / settings, before the long-running Bridge starts -------------
 if [ -n "$PB_USERNAME" ] && [ -n "$PB_PASSWORD" ]; then
     echo "Attempting Proton login for ${PB_USERNAME}..."
-    result=$(/usr/local/bin/login.exp login 2>&1)
+    result=$(/usr/local/bin/login.exp login 2>&1 | tr -d '\000')
     echo "$result" | tail -n 40
     /usr/local/bin/clear-secrets.sh
 elif [ -d /root/.password-store ] && [ -n "$PB_IMAP_SECURITY" ]; then
-    result=$(/usr/local/bin/login.exp settings 2>&1)
+    result=$(/usr/local/bin/login.exp settings 2>&1 | tr -d '\000')
     echo "$result" | grep -E '^(LOGIN_FAIL|IMAP_SECURITY_SET)' || true
 fi
 unset PB_PASSWORD PB_MAILBOX_PASSWORD PB_2FA

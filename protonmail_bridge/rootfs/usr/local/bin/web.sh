@@ -35,6 +35,18 @@ creds() {
     tmux clear-history -t bridge
 }
 
+# Proton URLs currently in the Bridge CLI output (e.g. a human-verification link); wrapped lines are rejoined.
+links() {
+    tmux has-session -t bridge 2>/dev/null || { echo "Bridge CLI is not running."; return; }
+    tmux capture-pane -p -J -t bridge -S -300 \
+        | sed -e 's/\x1b\[[0-9;?]*[A-Za-z]//g' \
+        | grep -oE 'https://[A-Za-z0-9._~:/?#@!$&*+,;=%-]+' \
+        | sed -e 's/[.,;]*$//' \
+        | grep -E '^https://([a-z0-9-]+\.)*proton\.me([/?#]|$)' \
+        | grep -v 'mail-api' \
+        | awk '!seen[$0]++'
+}
+
 page() {
 cat <<'HTML'
 <!doctype html>
@@ -54,6 +66,10 @@ pre{white-space:pre-wrap;word-break:break-all;margin:8px 0 0}.mut{color:var(--mu
 <p class="mut">These are the IMAP username and password Bridge generated; they are not your Proton password. They are fetched from the running Bridge only when you click and are never written to the log.</p>
 <button id="show">Show Bridge credentials</button>
 <pre id="out"></pre></div>
+<div class="card"><strong>Verification links</strong>
+<p class="mut">If Proton asks for human verification (CAPTCHA) while you log in through the console, click below to get the link as a clickable address.</p>
+<button id="findlinks">Find verification links</button>
+<div id="linkout"></div></div>
 <div class="card"><strong>Home Assistant IMAP settings</strong>
 <p>Server <code>local-protonmail-bridge</code>, port <code>143</code>, folder <code>INBOX</code>, <em>Verify SSL certificate</em> off. Use the username and password above.</p></div>
 <p class="mut">Login and settings live on the add-on's Configuration tab. <a href="console/">Optional console</a> for CAPTCHA or security-key logins.</p>
@@ -61,6 +77,12 @@ pre{white-space:pre-wrap;word-break:break-all;margin:8px 0 0}.mut{color:var(--mu
 fetch('status',{cache:'no-store'}).then(r=>r.text()).then(t=>{document.getElementById('status').textContent=t}).catch(()=>{document.getElementById('status').textContent='Status unavailable.'});
 document.getElementById('show').onclick=function(){var b=this,o=document.getElementById('out');b.disabled=true;o.textContent='Reading from Bridge…';
 fetch('creds',{cache:'no-store'}).then(r=>r.text()).then(t=>{o.textContent=t}).catch(()=>{o.textContent='Request failed.'}).finally(()=>{b.disabled=false})};
+document.getElementById('findlinks').onclick=function(){var o=document.getElementById('linkout');o.textContent='Looking…';
+fetch('links',{cache:'no-store'}).then(r=>r.text()).then(function(t){o.textContent='';var n=0;
+t.split('\n').forEach(function(l){l=l.trim();if(!l)return;var u;try{u=new URL(l)}catch(e){return}
+if(u.protocol!=='https:'||!(u.hostname==='proton.me'||u.hostname.endsWith('.proton.me')))return;
+var d=document.createElement('div'),a=document.createElement('a');a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';a.textContent=u.href;a.style.wordBreak='break-all';d.appendChild(a);o.appendChild(d);n++});
+if(!n)o.textContent='No Proton links found in the console output yet.'}).catch(function(){o.textContent='Request failed.'})};
 </script></body></html>
 HTML
 }
@@ -68,6 +90,7 @@ HTML
 case "$method $path" in
     "GET /"|"GET /index.html") reply "200 OK" "text/html; charset=utf-8"; page ;;
     "GET /status") reply "200 OK" "text/plain; charset=utf-8"; status ;;
+    "GET /links")  reply "200 OK" "text/plain; charset=utf-8"; links ;;
     "GET /creds")  reply "200 OK" "text/plain; charset=utf-8"; creds ;;
     *) reply "404 Not Found" "text/plain"; echo "not found" ;;
 esac
