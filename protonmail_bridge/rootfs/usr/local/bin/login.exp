@@ -1,23 +1,31 @@
 #!/usr/bin/expect -f
-# Drives the Bridge CLI. Secrets come from the environment, never argv, and
-# log_user is off so nothing sensitive reaches the add-on log.
+# Drives the Bridge CLI. Secrets come from the environment, never argv.
+# CLI output after startup is recorded and only printed (secrets redacted) on failure.
 #
 #   login.exp login     log in with PB_USERNAME/PB_PASSWORD/PB_2FA/PB_MAILBOX_PASSWORD, then apply security
 #   login.exp settings  only apply PB_IMAP_SECURITY
-#
-# NOTE: prompt/response strings below are written from memory of Bridge's CLI and
-# are tolerant regexes; verify them against internal/frontend/cli in v3.27.1.
 set mode [lindex $argv 0]
 log_user 0
-set timeout 60
 proc env_or_empty {name} { if {[info exists ::env($name)]} { return $::env($name) } else { return "" } }
 set user  [env_or_empty PB_USERNAME]
 set pass  [env_or_empty PB_PASSWORD]
 set mbox  [env_or_empty PB_MAILBOX_PASSWORD]
 set tfa   [env_or_empty PB_2FA]
 set want  [string tolower [env_or_empty PB_IMAP_SECURITY]]
+set secrets [list $pass $mbox $tfa]
+set tx ""
 
-proc fail {msg} { puts "LOGIN_FAIL: $msg"; catch {send "exit\r"}; exit 1 }
+proc rec {} {
+    global tx expect_out
+    if {[info exists expect_out(buffer)]} { append tx $expect_out(buffer) }
+}
+proc report {} {
+    global tx secrets
+    set s $tx
+    foreach v $secrets { if {$v ne ""} { set s [string map [list $v "***"] $s] } }
+    puts "--- Bridge CLI transcript (secrets redacted) ---\n[string trim $s]\n---"
+}
+proc fail {msg} { rec; report; puts "LOGIN_FAIL: $msg"; catch {send "exit\r"}; exit 1 }
 
 # Startup output (GPG key generation, banner) holds no secrets, so show it for diagnosis.
 log_user 1
@@ -35,18 +43,19 @@ if {$mode eq "login"} {
     send "login\r"
     set sent_2fa 0
     expect {
-        -nocase -re {username[^\n]*:\s*$}          { send -- "$user\r"; exp_continue }
-        -nocase -re {mailbox password[^\n]*:\s*$}  { send -- "$mbox\r"; exp_continue }
-        -nocase -re {password[^\n]*:\s*$}          { send -- "$pass\r"; exp_continue }
+        -nocase -re {username[^\n]*:\s*$}         { rec; send -- "$user\r"; exp_continue }
+        -nocase -re {mailbox password[^\n]*:\s*$} { rec; send -- "$mbox\r"; exp_continue }
+        -nocase -re {password[^\n]*:\s*$}         { rec; send -- "$pass\r"; exp_continue }
         -nocase -re {(2fa|two[- ]factor|authentication) code[^\n]*:\s*$} {
+            rec
             if {$tfa eq "" || $sent_2fa} { fail "2FA code required (empty or rejected)" }
             set sent_2fa 1
             send -- "$tfa\r"; exp_continue
         }
-        -nocase -re {captcha|human verification} { fail "human verification required; use the web console" }
-        -nocase -re {fido|security key}          { fail "security-key 2FA is not supported here; use the web console" }
-        -nocase -re {(logged in|connected|account .* added)} {}
-        -nocase -re {(invalid|incorrect|wrong|failed|error)[^\n]*} { fail "$expect_out(0,string)" }
+        -nocase -re {captcha|human verification} { fail "human verification required; use the sidebar console" }
+        -nocase -re {fido|security key}          { fail "security-key 2FA is not supported here; use the sidebar console" }
+        -nocase -re {(added successfully|logged in|account [^\n]* added)} { rec }
+        -nocase -re {(invalid|incorrect|wrong|failed|error)[^\n]*} { fail "login rejected" }
         -re {>>>\s*$} { fail "login did not complete" }
         timeout { fail "timed out during login" }
         eof     { fail "CLI exited during login" }
@@ -59,12 +68,13 @@ if {$mode eq "login"} {
 if {$want ne ""} {
     send "info\r"
     expect -re {>>>\s*$}
+    rec
     set info $expect_out(buffer)
     if {[regexp -nocase {imap[^\n]*(ssl|starttls)} $info -> cur] && [string tolower $cur] ne $want} {
         send "change imap-security\r"
         expect {
-            -nocase -re {\(y/n\)|\[y/n\]|yes/no} { send "yes\r"; exp_continue }
-            -re {>>>\s*$} {}
+            -nocase -re {\(y/n\)|\[y/n\]|yes/no} { rec; send "yes\r"; exp_continue }
+            -re {>>>\s*$} { rec }
             timeout { fail "timed out changing IMAP security" }
         }
         puts "IMAP_SECURITY_SET $want"

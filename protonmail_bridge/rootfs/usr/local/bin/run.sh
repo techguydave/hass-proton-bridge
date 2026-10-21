@@ -40,13 +40,15 @@ SOCAT_IMAP=$!
 
 cp /etc/tmux.conf /root/.tmux.conf 2>/dev/null || true
 tmux new-session -d -s bridge /usr/local/bin/bridge-loop.sh
-ttyd -i 127.0.0.1 -p 7681 -W tmux attach -t bridge &
+ttyd -i 127.0.0.1 -p 7681 -b /console -W tmux attach -t bridge &
 TTYD=$!
+socat TCP-LISTEN:8100,bind=127.0.0.1,fork,reuseaddr EXEC:/usr/local/bin/web.sh &
+WEB=$!
 nginx -c /etc/nginx/nginx.conf &
 NGINX=$!
 echo "Proton Bridge add-on started (IMAP 143 / SMTP 25 on the internal network only)."
 
-while kill -0 "$SOCAT_SMTP" "$SOCAT_IMAP" "$TTYD" "$NGINX" 2>/dev/null \
+while kill -0 "$SOCAT_SMTP" "$SOCAT_IMAP" "$TTYD" "$WEB" "$NGINX" 2>/dev/null \
         && tmux has-session -t bridge 2>/dev/null; do
     sleep 5
 done

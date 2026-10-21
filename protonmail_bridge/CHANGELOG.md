@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.27.1-4.3
+- Sidebar panel is now a status page with an on-demand "Show Bridge credentials" button (nothing is logged); the web console moves to an optional `console/` link.
+- Failed logins print a secret-redacted CLI transcript.
+
 ## 3.27.1-4.2
 - Login script waits up to 5 minutes for the Bridge CLI (first-run GPG key generation) and logs its startup output for diagnosis.
 

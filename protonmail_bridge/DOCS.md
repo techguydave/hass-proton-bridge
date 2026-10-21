@@ -10,10 +10,10 @@ hostname `local-protonmail-bridge`.
 2. Click **Save**, then **Restart** straight away: 2FA codes expire after about 30 seconds.
 3. Check the **Log** tab for `LOGIN_OK`. The password, mailbox password and 2FA fields are cleared automatically
    after every attempt (success or failure), so a wrong password is never retried on restart.
-4. Open **Proton Bridge** in the sidebar and run `info`. Copy the Bridge-generated **username and password**;
-   these are *not* your Proton password.
+4. Open **Proton Bridge** in the sidebar and click **Show Bridge credentials**. Copy the Bridge-generated
+   **username and password** into the IMAP integration; these are *not* your Proton password.
 
-CAPTCHA/human verification and security-key 2FA cannot be scripted: use the sidebar console and run `login` there.
+CAPTCHA/human verification and security-key 2FA cannot be scripted: use the optional console link on the sidebar page and run `login` there.
 The session lives in the add-on's `/data` folder and survives restarts and updates.
 
 ## Home Assistant IMAP integration
