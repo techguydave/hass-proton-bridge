@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.27.1-4.6
+- Console is embedded in the status page and Proton verification links refresh automatically beneath it, so you never leave the page (leaving closed the console connection).
+
 ## 3.27.1-4.5
 - Status page lists Proton links (e.g. CAPTCHA/human-verification) found in the Bridge CLI output as clickable links.
 - Console text can be selected normally (tmux mouse mode off).

@@ -66,23 +66,27 @@ pre{white-space:pre-wrap;word-break:break-all;margin:8px 0 0}.mut{color:var(--mu
 <p class="mut">These are the IMAP username and password Bridge generated; they are not your Proton password. They are fetched from the running Bridge only when you click and are never written to the log.</p>
 <button id="show">Show Bridge credentials</button>
 <pre id="out"></pre></div>
+<div class="card"><strong>Console</strong>
+<p class="mut">Only needed for CAPTCHA or security-key logins. Stay on this page: leaving it closes the console connection.</p>
+<iframe id="term" src="console/" title="Bridge console" style="width:100%;height:55vh;min-height:320px;border:1px solid var(--mut);border-radius:6px;background:#000"></iframe></div>
 <div class="card"><strong>Verification links</strong>
-<p class="mut">If Proton asks for human verification (CAPTCHA) while you log in through the console, click below to get the link as a clickable address.</p>
-<button id="findlinks">Find verification links</button>
-<div id="linkout"></div></div>
+<p class="mut">If Proton asks for human verification (CAPTCHA) during <code>login</code>, the link appears here automatically. Click it to open it in a new tab, complete the check, then come back to this page and continue in the console.</p>
+<div id="linkout" class="mut">Watching the console…</div></div>
 <div class="card"><strong>Home Assistant IMAP settings</strong>
 <p>Server <code>local-protonmail-bridge</code>, port <code>143</code>, folder <code>INBOX</code>, <em>Verify SSL certificate</em> off. Use the username and password above.</p></div>
-<p class="mut">Login and settings live on the add-on's Configuration tab. <a href="console/">Optional console</a> for CAPTCHA or security-key logins.</p>
+<p class="mut">Login and settings live on the add-on's Configuration tab.</p>
 <script>
 fetch('status',{cache:'no-store'}).then(r=>r.text()).then(t=>{document.getElementById('status').textContent=t}).catch(()=>{document.getElementById('status').textContent='Status unavailable.'});
 document.getElementById('show').onclick=function(){var b=this,o=document.getElementById('out');b.disabled=true;o.textContent='Reading from Bridge…';
 fetch('creds',{cache:'no-store'}).then(r=>r.text()).then(t=>{o.textContent=t}).catch(()=>{o.textContent='Request failed.'}).finally(()=>{b.disabled=false})};
-document.getElementById('findlinks').onclick=function(){var o=document.getElementById('linkout');o.textContent='Looking…';
-fetch('links',{cache:'no-store'}).then(r=>r.text()).then(function(t){o.textContent='';var n=0;
+function refreshLinks(){if(document.hidden)return;var o=document.getElementById('linkout');
+fetch('links',{cache:'no-store'}).then(r=>r.text()).then(function(t){var items=[];
 t.split('\n').forEach(function(l){l=l.trim();if(!l)return;var u;try{u=new URL(l)}catch(e){return}
-if(u.protocol!=='https:'||!(u.hostname==='proton.me'||u.hostname.endsWith('.proton.me')))return;
-var d=document.createElement('div'),a=document.createElement('a');a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';a.textContent=u.href;a.style.wordBreak='break-all';d.appendChild(a);o.appendChild(d);n++});
-if(!n)o.textContent='No Proton links found in the console output yet.'}).catch(function(){o.textContent='Request failed.'})};
+if(u.protocol!=='https:'||!(u.hostname==='proton.me'||u.hostname.endsWith('.proton.me')))return;items.push(u.href)});
+var key=items.join('\n');if(o.dataset.key===key)return;o.dataset.key=key;o.textContent='';
+if(!items.length){o.className='mut';o.textContent='No Proton links in the console yet.';return}
+o.className='';items.forEach(function(h){var d=document.createElement('div'),a=document.createElement('a');a.href=h;a.target='_blank';a.rel='noopener noreferrer';a.textContent=h;a.style.wordBreak='break-all';d.appendChild(a);o.appendChild(d)})}).catch(function(){})}
+refreshLinks();setInterval(refreshLinks,4000);
 </script></body></html>
 HTML
 }
