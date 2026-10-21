@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.27.1-4.10
+- If the settings run gives no IMAP_SECURITY result, print its output for diagnosis.
+
 ## 3.27.1-4.9
 - Log the result of the IMAP-security settings run (the filter was dropping it) and show the CLI output if it fails.
 

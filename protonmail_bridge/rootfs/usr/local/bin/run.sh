@@ -24,7 +24,7 @@ elif [ -d /root/.password-store ] && [ -n "$PB_IMAP_SECURITY" ]; then
     if echo "$result" | grep -q '^LOGIN_FAIL'; then
         echo "$result" | tail -n 40
     else
-        echo "$result" | grep -E '^IMAP_SECURITY' || echo "IMAP_SECURITY: no result from settings run"
+        echo "$result" | grep -E '^IMAP_SECURITY' || { echo "IMAP_SECURITY: no result from settings run; output follows"; echo "$result" | tail -n 40; }
     fi
 fi
 unset PB_PASSWORD PB_MAILBOX_PASSWORD PB_2FA
