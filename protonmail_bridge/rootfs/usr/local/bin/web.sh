@@ -81,7 +81,7 @@ pre{white-space:pre-wrap;word-break:break-all;margin:8px 0 0}.mut{color:var(--mu
 <p class="mut">If Proton asks for human verification (CAPTCHA) during <code>login</code>, the link appears here automatically. Click it to open it in a new tab, complete the check, then come back to this page and continue in the console.</p>
 <div id="linkout" class="mut">Watching the console…</div></div>
 <div class="card"><strong>Home Assistant IMAP settings</strong>
-<p>Server <code>local-protonmail-bridge</code>, port <code>143</code>, folder <code>INBOX</code>, <em>Verify SSL certificate</em> off. Use the username and password above.</p></div>
+<p>Server <code>__HOST__</code>, port <code>143</code> (not <code>127.0.0.1:1143</code>, which is only reachable inside the add-on), folder <code>INBOX</code>, <em>Verify SSL certificate</em> off. Use the username and password above.</p></div>
 <p class="mut">Login and settings live on the add-on's Configuration tab.</p>
 <script>
 fetch('status',{cache:'no-store'}).then(r=>r.text()).then(t=>{document.getElementById('status').textContent=t}).catch(()=>{document.getElementById('status').textContent='Status unavailable.'});
@@ -100,7 +100,7 @@ HTML
 }
 
 case "$method $path" in
-    "GET /"|"GET /index.html") reply "200 OK" "text/html; charset=utf-8"; page ;;
+    "GET /"|"GET /index.html") reply "200 OK" "text/html; charset=utf-8"; page | sed "s/__HOST__/$(hostname)/g" ;;
     "GET /status") reply "200 OK" "text/plain; charset=utf-8"; status ;;
     "GET /links")  reply "200 OK" "text/plain; charset=utf-8"; links ;;
     "GET /creds")  reply "200 OK" "text/plain; charset=utf-8"; creds ;;

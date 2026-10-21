@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.27.1-4.11
+- Docs and status page show the real add-on hostname (and warn against 127.0.0.1:1143).
+- Fix the IMAP-security step (and post-login wait): the CLI prints sync progress after its prompt, so no pattern may require the prompt at the end of the output.
+
 ## 3.27.1-4.10
 - If the settings run gives no IMAP_SECURITY result, print its output for diagnosis.
 

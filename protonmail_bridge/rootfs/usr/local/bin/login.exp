@@ -45,43 +45,45 @@ file attributes $tlog -permissions 0600
 log_file -a $tlog
 set timeout 60
 
+# The CLI prints sync progress right after its prompt, so never expect the prompt at the end
+# of the output: match ">>>" anywhere, and wait for specific text where it matters.
 if {$mode eq "login"} {
     send "login\r"
     set sent_2fa 0
     expect {
-        -nocase -re {username[^\n]*:}         { rec; send -- "$user\r"; exp_continue }
-        -nocase -re {mailbox password[^\n]*:} { rec; send -- "$mbox\r"; exp_continue }
-        -nocase -re {password[^\n]*:}         { rec; send -- "$pass\r"; exp_continue }
-        -nocase -re {security key[^\n]*yes/no[^\n]*:} { rec; send -- "no\r"; exp_continue }
+        -nocase -re {username[^\n]*:}         { send -- "$user\r"; exp_continue }
+        -nocase -re {mailbox password[^\n]*:} { send -- "$mbox\r"; exp_continue }
+        -nocase -re {password[^\n]*:}         { send -- "$pass\r"; exp_continue }
+        -nocase -re {security key[^\n]*yes/no[^\n]*:} { send -- "no\r"; exp_continue }
         -nocase -re {(2fa|two[- ]factor|authentication) code[^\n]*:} {
-            rec
             if {$tfa eq "" || $sent_2fa} { fail "2FA code required (empty or rejected)" }
             set sent_2fa 1
             send -- "$tfa\r"; exp_continue
         }
         -nocase -re {captcha|human verification} { fail "human verification required; use the sidebar console" }
-        -nocase -re {(added successfully|logged in|account [^\n]* added)} { rec }
+        -nocase -re {(added successfully|logged in|account [^\n]* added)} {}
         -nocase -re {(invalid|incorrect|wrong|failed|error)[^\n]*} { fail "login rejected" }
-        -re {>>>\s*$} { fail "login did not complete" }
+        -re {>>>} { fail "login did not complete" }
         timeout { fail "timed out during login" }
         eof     { fail "CLI exited during login" }
     }
     puts "LOGIN_OK"
-    expect -re {>>>\s*$}
+    expect -timeout 10 -re {>>>} {}
 }
 
-# Apply IMAP security. `info` prints "IMAP Settings ... Security: X ... SMTP Settings"; the
-# change command may toggle, so only run it when the current mode differs.
+# Read the IMAP security mode from `info` ("IMAP Settings ... SMTP Settings ... Security: X").
 proc imap_security {} {
     send "info\r"
-    expect -re {>>>\s*$}
-    rec
-    # expect stores results in this proc's scope, so read the local expect_out
-    set buf $expect_out(buffer)
-    # greedy steps only: a lazy quantifier would make the whole pattern lazy in Tcl
-    if {![regexp -nocase {imap settings(.*)smtp settings} $buf -> blk]} {
-        if {![regexp -nocase {imap settings(.*)} $buf -> blk]} { return "" }
+    expect {
+        -nocase -re {smtp settings.*security:[ \t]*[a-z]+} {}
+        timeout { return "" }
     }
+    # expect stores its results in this proc's scope, so read the local expect_out
+    set buf $expect_out(buffer)
+    # drain the trailing prompt so the next expect starts clean
+    expect -timeout 5 -re {>>>} {}
+    # greedy steps only: a lazy quantifier would make the whole pattern lazy in Tcl
+    if {![regexp -nocase {imap settings(.*)smtp settings} $buf -> blk]} { return "" }
     if {[regexp -nocase {security:[ \t]*([A-Za-z]+)} $blk -> cur]} { return [string tolower $cur] }
     return ""
 }
@@ -90,8 +92,8 @@ if {$want ne ""} {
     if {$cur ne "" && $cur ne $want} {
         send "change imap-security\r"
         expect {
-            -nocase -re {yes/no[^\n]*:|\(y/n\)|\[y/n\]} { rec; send "yes\r"; exp_continue }
-            -re {>>>\s*$} { rec }
+            -nocase -re {yes/no[^\n]*:|\(y/n\)|\[y/n\]} { send "yes\r"; exp_continue }
+            -re {>>>} {}
             timeout { fail "timed out changing IMAP security" }
         }
         set now [imap_security]
