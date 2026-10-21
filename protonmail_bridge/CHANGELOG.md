@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.27.1-4.12
+- The server name is read from the Supervisor at runtime (stable hostname, never an IP); docs no longer hard-code one.
+- "Show Bridge credentials" shows the real server and port (not Bridge's internal 127.0.0.1:1143).
+- IMAP-security step retries `info` until the account has loaded.
+
 ## 3.27.1-4.11
 - Docs and status page show the real add-on hostname (and warn against 127.0.0.1:1143).
 - Fix the IMAP-security step (and post-login wait): the CLI prints sync progress after its prompt, so no pattern may require the prompt at the end of the output.

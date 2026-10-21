@@ -73,11 +73,19 @@ if {$mode eq "login"} {
 
 # Read the IMAP security mode from `info` ("IMAP Settings ... SMTP Settings ... Security: X").
 proc imap_security {} {
-    send "info\r"
-    expect {
-        -nocase -re {smtp settings.*security:[ \t]*[a-z]+} {}
-        timeout { return "" }
+    # Right after startup the account may not be loaded yet (info has no IMAP section), so retry.
+    set saved $::timeout
+    set ::timeout 5
+    set ok 0
+    for {set i 0} {$i < 12 && !$ok} {incr i} {
+        send "info\r"
+        expect {
+            -nocase -re {smtp settings.*security:[ \t]*[a-z]+} { set ok 1 }
+            timeout { after 3000 }
+        }
     }
+    set ::timeout $saved
+    if {!$ok} { return "" }
     # expect stores its results in this proc's scope, so read the local expect_out
     set buf $expect_out(buffer)
     # drain the trailing prompt so the next expect starts clean

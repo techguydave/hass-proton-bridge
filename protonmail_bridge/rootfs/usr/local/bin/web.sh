@@ -11,6 +11,19 @@ while IFS= read -r header; do
     [ -z "$header" ] && break
 done
 
+# This add-on's network hostname as the Supervisor knows it. It is stable across restarts and updates
+# (unlike the container IP) and is what other containers, e.g. Home Assistant, must use.
+addon_host() {
+    local h
+    h=$(cat /tmp/addon_host 2>/dev/null)
+    if [ -z "$h" ] && [ -n "${SUPERVISOR_TOKEN:-}" ]; then
+        h=$(curl -fsS -m 5 -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" http://supervisor/addons/self/info 2>/dev/null | jq -r '.data.hostname // empty' 2>/dev/null)
+    fi
+    [ -n "$h" ] || h=$(hostname)
+    printf '%s' "$h" > /tmp/addon_host 2>/dev/null
+    printf '%s' "$h"
+}
+
 reply() {
     printf 'HTTP/1.1 %s\r\nContent-Type: %s\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n' "$1" "$2"
 }
@@ -37,7 +50,13 @@ creds() {
         tolower($0) ~ /imap/ && tolower($0) !~ /(username|password|port|address|security)[[:space:]]*:/ {f=1; next}
         tolower($0) ~ /smtp/ && tolower($0) !~ /(username|password|port|address|security)[[:space:]]*:/ {f=0; next}
         f && tolower($0) ~ /(address|port|username|password|security)[[:space:]]*:/ {sub(/^[[:space:]]+/, ""); print}')
-    if [ -n "$trimmed" ]; then printf '%s\n' "$trimmed"; else printf '%s\n' "$out"; fi
+    if [ -n "$trimmed" ]; then
+        # Bridge's own Address/IMAP port (127.0.0.1:1143) are internal; show how Home Assistant connects instead.
+        printf 'Server:    %s\nPort:      143\n' "$(addon_host)"
+        printf '%s\n' "$trimmed" | grep -viE '^(address|imap port):'
+    else
+        printf '%s\n' "$out"
+    fi
     tmux send-keys -t bridge C-l
     sleep 1
     tmux clear-history -t bridge
@@ -100,7 +119,7 @@ HTML
 }
 
 case "$method $path" in
-    "GET /"|"GET /index.html") reply "200 OK" "text/html; charset=utf-8"; page | sed "s/__HOST__/$(hostname)/g" ;;
+    "GET /"|"GET /index.html") reply "200 OK" "text/html; charset=utf-8"; page | sed "s/__HOST__/$(addon_host)/g" ;;
     "GET /status") reply "200 OK" "text/plain; charset=utf-8"; status ;;
     "GET /links")  reply "200 OK" "text/plain; charset=utf-8"; links ;;
     "GET /creds")  reply "200 OK" "text/plain; charset=utf-8"; creds ;;
