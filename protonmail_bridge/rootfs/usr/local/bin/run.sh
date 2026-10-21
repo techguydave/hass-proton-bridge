@@ -17,7 +17,7 @@ export PB_IMAP_SECURITY="$(opt imap_security)"
 if [ -n "$PB_USERNAME" ] && [ -n "$PB_PASSWORD" ]; then
     echo "Attempting Proton login for ${PB_USERNAME}..."
     result=$(/usr/local/bin/login.exp login 2>&1)
-    echo "$result" | grep -E '^(LOGIN_OK|LOGIN_FAIL|IMAP_SECURITY_SET)' || echo "LOGIN_FAIL: no result from login script"
+    echo "$result" | tail -n 40
     /usr/local/bin/clear-secrets.sh
 elif [ -d /root/.password-store ] && [ -n "$PB_IMAP_SECURITY" ]; then
     result=$(/usr/local/bin/login.exp settings 2>&1)

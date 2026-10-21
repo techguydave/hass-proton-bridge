@@ -19,12 +19,17 @@ set want  [string tolower [env_or_empty PB_IMAP_SECURITY]]
 
 proc fail {msg} { puts "LOGIN_FAIL: $msg"; catch {send "exit\r"}; exit 1 }
 
+# Startup output (GPG key generation, banner) holds no secrets, so show it for diagnosis.
+log_user 1
+set timeout 300
 spawn bash /protonmail/entrypoint.sh init
 expect {
-    -re {>>>\s*$} {}
-    timeout { fail "Bridge CLI prompt did not appear" }
+    -re {>>>} {}
+    timeout { fail "Bridge CLI prompt did not appear within 300 s" }
     eof     { fail "Bridge CLI exited at startup" }
 }
+log_user 0
+set timeout 60
 
 if {$mode eq "login"} {
     send "login\r"

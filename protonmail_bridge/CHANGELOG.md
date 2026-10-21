@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.27.1-4.2
+- Login script waits up to 5 minutes for the Bridge CLI (first-run GPG key generation) and logs its startup output for diagnosis.
+
 ## 3.27.1-4.1
 - Fix image build: install ttyd from the pinned upstream static binary (not packaged in Debian bookworm).
 - Move the base image into the Dockerfile and drop the deprecated `build.yaml`.
