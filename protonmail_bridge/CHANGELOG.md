@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.27.1-4.4
+- Fix login timeout: prompt patterns no longer require the prompt at end of line (the CLI redraws it with escape codes).
+- On failure, print the CLI output with escape codes stripped and secrets redacted.
+
 ## 3.27.1-4.3
 - Sidebar panel is now a status page with an on-demand "Show Bridge credentials" button (nothing is logged); the web console moves to an optional `console/` link.
 - Failed logins print a secret-redacted CLI transcript.

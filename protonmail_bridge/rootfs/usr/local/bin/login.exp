@@ -13,40 +13,46 @@ set mbox  [env_or_empty PB_MAILBOX_PASSWORD]
 set tfa   [env_or_empty PB_2FA]
 set want  [string tolower [env_or_empty PB_IMAP_SECURITY]]
 set secrets [list $pass $mbox $tfa]
-set tx ""
+set tlog /tmp/pb-cli.log
+file delete -force $tlog
 
-proc rec {} {
-    global tx expect_out
-    if {[info exists expect_out(buffer)]} { append tx $expect_out(buffer) }
-}
+proc rec {} {}
 proc report {} {
-    global tx secrets
-    set s $tx
+    global secrets tlog
+    catch {log_file}
+    if {[catch {set f [open $tlog r]; set s [read $f]; close $f}]} { return }
+    regsub -all {\x1b\[[0-9;?]*[A-Za-z]} $s "" s
+    regsub -all {[\r\x08]} $s "" s
     foreach v $secrets { if {$v ne ""} { set s [string map [list $v "***"] $s] } }
-    puts "--- Bridge CLI transcript (secrets redacted) ---\n[string trim $s]\n---"
+    puts "--- Bridge CLI output (secrets redacted) ---\n[string trim $s]\n---"
+    file delete -force $tlog
 }
-proc fail {msg} { rec; report; puts "LOGIN_FAIL: $msg"; catch {send "exit\r"}; exit 1 }
+proc fail {msg} { report; puts "LOGIN_FAIL: $msg"; catch {send "exit\r"}; exit 1 }
 
 # Startup output (GPG key generation, banner) holds no secrets, so show it for diagnosis.
 log_user 1
 set timeout 300
-spawn bash /protonmail/entrypoint.sh init
+set entry [expr {[info exists ::env(PB_ENTRYPOINT)] ? $::env(PB_ENTRYPOINT) : "/protonmail/entrypoint.sh"}]
+spawn bash $entry init
 expect {
     -re {>>>} {}
     timeout { fail "Bridge CLI prompt did not appear within 300 s" }
     eof     { fail "Bridge CLI exited at startup" }
 }
 log_user 0
+close [open $tlog w]
+file attributes $tlog -permissions 0600
+log_file -a $tlog
 set timeout 60
 
 if {$mode eq "login"} {
     send "login\r"
     set sent_2fa 0
     expect {
-        -nocase -re {username[^\n]*:\s*$}         { rec; send -- "$user\r"; exp_continue }
-        -nocase -re {mailbox password[^\n]*:\s*$} { rec; send -- "$mbox\r"; exp_continue }
-        -nocase -re {password[^\n]*:\s*$}         { rec; send -- "$pass\r"; exp_continue }
-        -nocase -re {(2fa|two[- ]factor|authentication) code[^\n]*:\s*$} {
+        -nocase -re {username[^\n]*:}         { rec; send -- "$user\r"; exp_continue }
+        -nocase -re {mailbox password[^\n]*:} { rec; send -- "$mbox\r"; exp_continue }
+        -nocase -re {password[^\n]*:}         { rec; send -- "$pass\r"; exp_continue }
+        -nocase -re {(2fa|two[- ]factor|authentication) code[^\n]*:} {
             rec
             if {$tfa eq "" || $sent_2fa} { fail "2FA code required (empty or rejected)" }
             set sent_2fa 1
@@ -82,4 +88,6 @@ if {$want ne ""} {
 }
 send "exit\r"
 expect eof
+catch {log_file}
+file delete -force $tlog
 exit 0
