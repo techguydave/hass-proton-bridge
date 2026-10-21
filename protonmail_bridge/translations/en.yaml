@@ -1,0 +1,16 @@
+configuration:
+  username:
+    name: Proton username
+    description: Your Proton account email. Used only for the one-time login.
+  password:
+    name: Proton password
+    description: Used once for login, then cleared automatically after the attempt.
+  mailbox_password:
+    name: Mailbox password
+    description: Only for accounts in two-password mode. Cleared after the attempt.
+  two_factor_code:
+    name: 2FA code
+    description: Current 6-digit code. Enter it, then Save and Restart right away; cleared after the attempt.
+  imap_security:
+    name: IMAP security
+    description: Use ssl for Home Assistant's IMAP integration (it does not support STARTTLS).

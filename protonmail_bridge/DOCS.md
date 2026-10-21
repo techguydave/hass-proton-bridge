@@ -1,0 +1,33 @@
+# Proton Mail Bridge
+
+Runs Proton Mail Bridge so Home Assistant's built-in **IMAP** integration can read your Proton mailbox.
+No ports are published; the add-on is reachable only on the internal Home Assistant network at
+hostname `local-protonmail-bridge`.
+
+## One-time login
+1. Open the add-on **Configuration** tab and fill in **Proton username**, **Proton password**, the
+   **2FA code** (and **Mailbox password** if your account uses two-password mode).
+2. Click **Save**, then **Restart** straight away: 2FA codes expire after about 30 seconds.
+3. Check the **Log** tab for `LOGIN_OK`. The password, mailbox password and 2FA fields are cleared automatically
+   after every attempt (success or failure), so a wrong password is never retried on restart.
+4. Open **Proton Bridge** in the sidebar and run `info`. Copy the Bridge-generated **username and password**;
+   these are *not* your Proton password.
+
+CAPTCHA/human verification and security-key 2FA cannot be scripted: use the sidebar console and run `login` there.
+The session lives in the add-on's `/data` folder and survives restarts and updates.
+
+## Home Assistant IMAP integration
+- Server `local-protonmail-bridge`, port `143`
+- Username / password from `info`
+- Folder `INBOX`
+- **Verify SSL certificate: off** (Bridge uses a self-signed certificate; turn on Advanced mode in your user profile to see this option)
+
+Keep **IMAP security** on `ssl`: HA's IMAP integration does not support STARTTLS.
+
+## Security notes
+- HA backups of this add-on include the Bridge session and keys. Keep backup encryption on.
+- The web console is admin-only and reachable only through Home Assistant ingress.
+
+## Troubleshooting
+- Login failed: read the log line after `LOGIN_FAIL`, then retry from the Configuration tab or the console.
+- Start over: in the console run `logout`/`login`, or uninstall the add-on to delete `/data`.
