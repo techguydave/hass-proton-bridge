@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.27.1-4.1
+- Fix image build: install ttyd from the pinned upstream static binary (not packaged in Debian bookworm).
+- Move the base image into the Dockerfile and drop the deprecated `build.yaml`.
+
 ## 3.27.1-4.0
 - Initial release: Proton Mail Bridge v3.27.1 (base image `dancwilliams/protonmail-bridge:v3.27.1-4`).
 - Login from the Configuration tab, with secrets cleared after each attempt.
