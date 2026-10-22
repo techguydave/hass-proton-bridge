@@ -1,5 +1,13 @@
 # Changelog
 
+Versioning: `<Proton Bridge version>.<add-on revision>`, e.g. `3.27.1.15`. Keep the revision a plain number:
+Home Assistant cannot order versions with a hyphenated suffix (it treats `3.27.1-4.14` as not newer than
+`3.27.1-4.13`), which leaves the Update button greyed out.
+
+## 3.27.1.15
+- Switch to dotted versioning so Home Assistant offers updates in the UI (the old `3.27.1-4.N` scheme was never seen as newer).
+- Includes 3.27.1-4.14: result lines (LOGIN_OK, LOGIN_FAIL, IMAP_SECURITY...) start on their own line.
+
 ## 3.27.1-4.14
 - Result lines (LOGIN_OK, LOGIN_FAIL, IMAP_SECURITY…) start on their own line, so the log filter no longer reports "no result" falsely.
 
