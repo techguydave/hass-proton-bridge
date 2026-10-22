@@ -24,6 +24,9 @@ The session lives in the add-on's `/data` folder and survives restarts and updat
 
 Keep **IMAP security** on `ssl`: HA's IMAP integration does not support STARTTLS.
 
+## Mailbox sync
+Bridge downloads your mailbox before mail apps (and Home Assistant) can see all of it. The sidebar page's **Mailbox sync** card shows whether a sync is running (with progress and time left), when the last one finished and how long it took, or whether a restart interrupted it, plus the last error Bridge logged. A full sync runs when Bridge starts (quick once the mailbox is already downloaded), when its connection to Proton comes back, or when Proton requests a resync. There are no smaller syncs: between them, Bridge checks Proton for changes (new mail, read flags, moves) every 20–40 seconds. The card shows when the last check ran, whether it failed, and when the last change arrived. It also warns if no check has run for over 3 minutes or if Bridge has lost its connection to Proton. These times come from Bridge's own debug log files in the add-on's data folder; only timestamps are read, never message details.
+
 ## Logs
 With **Forward Bridge logs** on (the default), Bridge's warnings, errors and sync progress from the console also appear in the add-on's **Log** tab, prefixed `[bridge]`. Only lines Bridge's logger prints are forwarded; `info` output, typed codes and verification links stay in the console.
 

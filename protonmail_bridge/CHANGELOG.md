@@ -4,6 +4,10 @@ Versioning: `<Proton Bridge version>.<add-on revision>`, e.g. `3.27.1.15`. Keep 
 Home Assistant cannot order versions with a hyphenated suffix (it treats `3.27.1-4.14` as not newer than
 `3.27.1-4.13`), which leaves the Update button greyed out.
 
+## 3.27.1.17
+- Mailbox sync card also shows the last check with Proton for changes (every 20–40 s), whether it failed, and when the last change arrived, read from timestamps in Bridge's own log files; it warns if checks stop or the connection to Proton is lost.
+- Status page shows a Mailbox sync card: syncing with progress and time left, a sync retrying after errors, when the last full sync finished and how long it took, or that it was interrupted by a restart, plus the last Bridge error. The state is recorded from the console (whether or not log forwarding is on) and kept in `/data` across restarts.
+
 ## 3.27.1.16
 - Status page no longer opens a connection to Bridge's IMAP port to check it (each page load logged "IMAP server error error=EOF"); it reads the socket table instead.
 - Forward Bridge's own log lines (WARN/ERRO etc.) and sync progress from the console to the add-on log, filtered by an allowlist so passwords, 2FA codes and verification links never reach the log. Option `Forward Bridge logs` (on by default).

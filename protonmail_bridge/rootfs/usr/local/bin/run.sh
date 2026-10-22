@@ -44,15 +44,18 @@ SOCAT_IMAP=$!
 
 cp /etc/tmux.conf /root/.tmux.conf 2>/dev/null || true
 tmux new-session -d -s bridge /usr/local/bin/bridge-loop.sh
-# Forward Bridge's own log lines from the console to the add-on log (filtered allowlist, see
-# console-log.sh). The reader is a child of this script, so it writes to the add-on log; it reopens
-# the FIFO whenever the writer goes away.
-if [ "$(jq -r '.forward_console_logs' "$OPTIONS")" != "false" ]; then
-    rm -f /tmp/console.fifo
-    mkfifo -m 600 /tmp/console.fifo
-    ( while true; do /usr/local/bin/console-log.sh < /tmp/console.fifo; done ) &
-    tmux pipe-pane -o -t bridge 'exec cat >> /tmp/console.fifo'
+# Watch the console: console-log.sh records the mailbox sync state for the status page and, unless
+# turned off, forwards Bridge's own log lines (filtered allowlist) to the add-on log. The reader is a
+# child of this script, so it writes to the add-on log; it reopens the FIFO whenever the writer goes away.
+export SYNC_STATE=/data/sync_status.json
+if [ -f "$SYNC_STATE" ] && [ "$(jq -r '.state' "$SYNC_STATE" 2>/dev/null)" = syncing ]; then
+    jq '.state = "interrupted"' "$SYNC_STATE" > "$SYNC_STATE.tmp" && mv -f "$SYNC_STATE.tmp" "$SYNC_STATE"
 fi
+if [ "$(jq -r '.forward_console_logs' "$OPTIONS")" = "false" ]; then export FORWARD_LOGS=0; else export FORWARD_LOGS=1; fi
+rm -f /tmp/console.fifo
+mkfifo -m 600 /tmp/console.fifo
+( while true; do /usr/local/bin/console-log.sh < /tmp/console.fifo; done ) &
+tmux pipe-pane -o -t bridge 'exec cat >> /tmp/console.fifo'
 ttyd -i 127.0.0.1 -p 7681 -b /console -W tmux attach -t bridge &
 TTYD=$!
 socat TCP-LISTEN:8100,bind=127.0.0.1,fork,reuseaddr EXEC:/usr/local/bin/web.sh &

@@ -24,6 +24,38 @@ addon_host() {
     printf '%s' "$h"
 }
 
+# Bridge writes a debug log to rotating files (the console only ever shows warnings and errors). Each
+# check with Proton for changes, every 20-40 s, logs "No new API Events" or "Received new API event".
+# Only timestamps are read here; no log content leaves this function.
+BRIDGE_LOGS=${BRIDGE_LOGS:-/root/.local/share/protonmail/bridge-v3/logs}
+
+mailcheck() {
+    local files key t args=()
+    files=$(ls -1t "$BRIDGE_LOGS"/*.log 2>/dev/null | grep -v '_crash\.log$' | head -n 2)
+    if [ -n "$files" ]; then
+        # Newest lines first; keep the first (= latest) timestamp of each kind, stop once all are found.
+        while IFS=$'\t' read -r key t; do
+            t=$(date -d "$t" +%s 2>/dev/null) && args+=(--arg "$key" "$t")
+        done < <(for f in $files; do tac "$f"; done | awk '
+            function take(k) { if (!(k in got) && match($0, /time="[^"]+"/)) { got[k] = substr($0, RSTART + 6, RLENGTH - 7); n++ } }
+            /msg="(No new API Events|Received new API event)/ { take("check"); take("ok") }
+            /msg="Failed to get event/                        { take("check") }
+            /msg="Received new API event"/                    { take("change") }
+            /msg="Connection Lost, pausing"/                  { take("lost") }
+            /msg="Connection Restored, resuming"/             { take("restored") }
+            n >= 5 { exit }
+            END { for (k in got) print k "\t" got[k] }')
+    fi
+    jq -n "${args[@]}" '{
+        last_check: ($ARGS.named.check // null | tonumber? // null),
+        last_ok_check: ($ARGS.named.ok // null | tonumber? // null),
+        last_change: ($ARGS.named.change // null | tonumber? // null),
+        connection_lost: ($ARGS.named.lost // null | tonumber? // null),
+        connection_restored: ($ARGS.named.restored // null | tonumber? // null),
+        log_found: ($ARGS.named | length > 0)
+    }'
+}
+
 reply() {
     printf 'HTTP/1.1 %s\r\nContent-Type: %s\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n' "$1" "$2"
 }
@@ -97,6 +129,8 @@ pre{white-space:pre-wrap;word-break:break-all;margin:8px 0 0}.mut{color:var(--mu
 </style></head><body>
 <h1>Proton Mail Bridge</h1>
 <div class="card"><strong>Status</strong><div id="status" class="mut">Checking…</div></div>
+<div class="card"><strong>Mailbox sync</strong><div id="sync">Checking…</div><div id="mailcheck">Checking…</div><div id="syncerr" class="mut"></div>
+<p class="mut">A full sync runs when Bridge starts, when its connection to Proton comes back, or when Proton asks for a resync. Between syncs, Bridge checks Proton for changes (new mail, read flags, moves) every 20–40 seconds; the last check and the last change come from Bridge's own log.</p></div>
 <div class="card"><strong>Bridge credentials</strong>
 <p class="mut">The IMAP login Bridge generated (not your Proton password), fetched only when you click.</p>
 <button id="show">Show Bridge credentials</button>
@@ -111,6 +145,38 @@ pre{white-space:pre-wrap;word-break:break-all;margin:8px 0 0}.mut{color:var(--mu
 <p>Server <code>__HOST__</code>, port <code>143</code> (not <code>127.0.0.1:1143</code>, which is only reachable inside the add-on), folder <code>INBOX</code>, <em>Verify SSL certificate</em> off. Use the username and password above.</p></div>
 <p class="mut">Login and settings live on the add-on's Configuration tab.</p>
 <script>
+function ago(sec,now){var d=Math.max(0,Math.round(now-sec));if(d<90)return d+' s ago';if(d<5400)return Math.round(d/60)+' min ago';if(d<129600)return Math.round(d/3600)+' h ago';return Math.round(d/86400)+' days ago'}
+function dur(s){s=Math.max(0,Math.round(s));if(s<90)return s+' s';if(s<5400)return Math.round(s/60)+' min';return (s/3600).toFixed(1)+' h'}
+function when(sec){return new Date(sec*1000).toLocaleString()}
+function syncText(d,now){
+  var r={main:'No sync recorded yet. It appears here the next time Bridge syncs.',err:''};
+  var retrying=d&&d.state==='syncing'&&d.last_error&&d.started&&d.last_error.time>=d.started&&/Failed to sync/.test(d.last_error.text);
+  if(retrying){r.main='The sync of '+(d.account||'')+' is retrying after an error (Bridge retries every 20 s); '+(d.percent!=null?d.percent:0)+'% done so far, started '+when(d.started)+'.'}
+  else if(d&&d.state==='syncing'){var eta=d.eta&&/^[0-9.]+s$/.test(d.eta)?' · about '+dur(parseFloat(d.eta))+' left':'';
+    r.main='Syncing '+(d.account||'')+': '+(d.percent!=null?d.percent:0)+'%'+eta+(d.started?' · started '+when(d.started):'')+'. Mail apps see only part of the mailbox until it finishes.'}
+  else if(d&&d.state==='finished'&&d.finished){r.main='Last full sync finished '+when(d.finished)+' ('+ago(d.finished,now)+')'+(d.started?', took '+dur(d.finished-d.started):'')+'.'}
+  else if(d&&d.state==='interrupted'){r.main='The last sync'+(d.started?' (started '+when(d.started)+')':'')+' was interrupted by a restart at '+(d.percent!=null?d.percent:0)+'%. Bridge syncs again after it starts.'}
+  if(d&&d.last_error){r.err='Last Bridge error, '+when(d.last_error.time)+' ('+ago(d.last_error.time,now)+'): '+d.last_error.text}
+  return r}
+function refreshSync(){if(document.hidden)return;
+  fetch('sync',{cache:'no-store'}).then(r=>r.json()).then(function(d){var t=syncText(d,Date.now()/1000);
+    document.getElementById('sync').textContent=t.main;document.getElementById('syncerr').textContent=t.err})
+  .catch(function(){document.getElementById('sync').textContent='Sync status unavailable.'})}
+refreshSync();setInterval(refreshSync,10000);
+function mailcheckText(m,now){
+  if(!m||!m.log_found)return 'No checks with Proton found in Bridge\'s log yet.';
+  if(m.connection_lost&&(!m.connection_restored||m.connection_lost>m.connection_restored))
+    return 'Bridge lost its connection to Proton '+ago(m.connection_lost,now)+' and has paused mail checks until it comes back.';
+  if(!m.last_check)return 'No checks with Proton found in Bridge\'s log yet.';
+  var t;
+  if(now-m.last_check>180)t='No check with Proton for '+dur(now-m.last_check)+' (normally every 20–40 s).';
+  else t='Last check with Proton '+ago(m.last_check,now)+(m.last_ok_check===m.last_check?'':' (failed; Bridge retries automatically)')+'.';
+  if(m.last_change)t+=' Last change from Proton: '+when(m.last_change)+' ('+ago(m.last_change,now)+').';
+  return t}
+function refreshMailcheck(){if(document.hidden)return;
+  fetch('mailcheck',{cache:'no-store'}).then(r=>r.json()).then(function(m){document.getElementById('mailcheck').textContent=mailcheckText(m,Date.now()/1000)})
+  .catch(function(){document.getElementById('mailcheck').textContent='Mail check status unavailable.'})}
+refreshMailcheck();setInterval(refreshMailcheck,30000);
 fetch('status',{cache:'no-store'}).then(r=>r.text()).then(t=>{document.getElementById('status').textContent=t}).catch(()=>{document.getElementById('status').textContent='Status unavailable.'});
 document.getElementById('show').onclick=function(){var b=this,o=document.getElementById('out');b.disabled=true;o.textContent='Reading from Bridge…';
 fetch('creds',{cache:'no-store'}).then(r=>r.text()).then(t=>{o.textContent=t}).catch(()=>{o.textContent='Request failed.'}).finally(()=>{b.disabled=false})};
@@ -129,6 +195,8 @@ HTML
 case "$method $path" in
     "GET /"|"GET /index.html") reply "200 OK" "text/html; charset=utf-8"; page | sed "s/__HOST__/$(addon_host)/g" ;;
     "GET /status") reply "200 OK" "text/plain; charset=utf-8"; status ;;
+    "GET /mailcheck") reply "200 OK" "application/json"; mailcheck ;;
+    "GET /sync")   reply "200 OK" "application/json"; cat "${SYNC_STATE:-/data/sync_status.json}" 2>/dev/null || echo '{}' ;;
     "GET /links")  reply "200 OK" "text/plain; charset=utf-8"; links ;;
     "GET /creds")  reply "200 OK" "text/plain; charset=utf-8"; creds ;;
     *) reply "404 Not Found" "text/plain"; echo "not found" ;;
