@@ -1,5 +1,5 @@
 name: Proton Mail Bridge
-version: "3.27.1.15"
+version: "3.27.1.16"
 slug: protonmail_bridge
 description: Proton Mail Bridge exposing your mailbox as IMAP/SMTP inside the Home Assistant network only
 url: https://github.com/techguydave/hass-proton-bridge
@@ -17,9 +17,11 @@ panel_title: Proton Bridge
 panel_admin: true
 options:
   imap_security: ssl
+  forward_console_logs: true
 schema:
   username: "str?"
   password: "password?"
   mailbox_password: "password?"
   two_factor_code: "match(^[0-9]{6}$)?"
   imap_security: "list(ssl|starttls)"
+  forward_console_logs: bool

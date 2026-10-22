@@ -44,6 +44,15 @@ SOCAT_IMAP=$!
 
 cp /etc/tmux.conf /root/.tmux.conf 2>/dev/null || true
 tmux new-session -d -s bridge /usr/local/bin/bridge-loop.sh
+# Forward Bridge's own log lines from the console to the add-on log (filtered allowlist, see
+# console-log.sh). The reader is a child of this script, so it writes to the add-on log; it reopens
+# the FIFO whenever the writer goes away.
+if [ "$(jq -r '.forward_console_logs' "$OPTIONS")" != "false" ]; then
+    rm -f /tmp/console.fifo
+    mkfifo -m 600 /tmp/console.fifo
+    ( while true; do /usr/local/bin/console-log.sh < /tmp/console.fifo; done ) &
+    tmux pipe-pane -o -t bridge 'exec cat >> /tmp/console.fifo'
+fi
 ttyd -i 127.0.0.1 -p 7681 -b /console -W tmux attach -t bridge &
 TTYD=$!
 socat TCP-LISTEN:8100,bind=127.0.0.1,fork,reuseaddr EXEC:/usr/local/bin/web.sh &

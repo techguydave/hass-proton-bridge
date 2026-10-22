@@ -24,6 +24,9 @@ The session lives in the add-on's `/data` folder and survives restarts and updat
 
 Keep **IMAP security** on `ssl`: HA's IMAP integration does not support STARTTLS.
 
+## Logs
+With **Forward Bridge logs** on (the default), Bridge's warnings, errors and sync progress from the console also appear in the add-on's **Log** tab, prefixed `[bridge]`. Only lines Bridge's logger prints are forwarded; `info` output, typed codes and verification links stay in the console.
+
 ## Security notes
 - HA backups of this add-on include the Bridge session and keys. Keep backup encryption on.
 - The web console is admin-only and reachable only through Home Assistant ingress.

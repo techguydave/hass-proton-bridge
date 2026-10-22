@@ -28,8 +28,16 @@ reply() {
     printf 'HTTP/1.1 %s\r\nContent-Type: %s\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n' "$1" "$2"
 }
 
+# True if something is in LISTEN state (st 0A) on local port 1143 (hex 0477).
+imap_listening() {
+    awk 'FNR > 1 && $2 ~ /:0477$/ && $4 == "0A" { found = 1 } END { exit !found }' \
+        /proc/net/tcp /proc/net/tcp6 2>/dev/null
+}
+
 status() {
-    if (exec 3<>/dev/tcp/127.0.0.1/1143) 2>/dev/null; then echo "Bridge IMAP is listening."; else echo "Bridge IMAP is not listening yet (not logged in, or still starting)."; fi
+    # Look for a listener on 1143 in the kernel socket table instead of connecting: a bare connect
+    # and close makes Bridge log "IMAP server error error=EOF" on every page load.
+    if imap_listening; then echo "Bridge IMAP is listening."; else echo "Bridge IMAP is not listening yet (not logged in, or still starting)."; fi
 }
 
 # Run `info` in the Bridge CLI (tmux session) and print its output, then clear the screen/history.

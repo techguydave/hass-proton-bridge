@@ -14,3 +14,6 @@ configuration:
   imap_security:
     name: IMAP security
     description: Use ssl for Home Assistant's IMAP integration (it does not support STARTTLS).
+  forward_console_logs:
+    name: Forward Bridge logs
+    description: Copy Bridge's warnings, errors and sync progress from the console to this add-on's log. Passwords, 2FA codes and verification links are never forwarded.

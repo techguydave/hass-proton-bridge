@@ -4,6 +4,10 @@ Versioning: `<Proton Bridge version>.<add-on revision>`, e.g. `3.27.1.15`. Keep 
 Home Assistant cannot order versions with a hyphenated suffix (it treats `3.27.1-4.14` as not newer than
 `3.27.1-4.13`), which leaves the Update button greyed out.
 
+## 3.27.1.16
+- Status page no longer opens a connection to Bridge's IMAP port to check it (each page load logged "IMAP server error error=EOF"); it reads the socket table instead.
+- Forward Bridge's own log lines (WARN/ERRO etc.) and sync progress from the console to the add-on log, filtered by an allowlist so passwords, 2FA codes and verification links never reach the log. Option `Forward Bridge logs` (on by default).
+
 ## 3.27.1.15
 - Switch to dotted versioning so Home Assistant offers updates in the UI (the old `3.27.1-4.N` scheme was never seen as newer).
 - Includes 3.27.1-4.14: result lines (LOGIN_OK, LOGIN_FAIL, IMAP_SECURITY...) start on their own line.
